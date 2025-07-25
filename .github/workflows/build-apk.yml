@@ -1,4 +1,4 @@
-name: Build + Attest APK
+name: Build + Upload + Attest APK
 
 on:
   push:
@@ -9,16 +9,24 @@ permissions:
   contents: read
 
 jobs:
-  upload-prebuilt-apk:
+  build-upload-attest:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Upload APK with attestation
-        uses: actions/upload-artifact@v3
+      # If you build your APK, do it here
+      # - name: Build APK
+      #   run: ./gradlew assembleRelease
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
         with:
           name: app.apk
           path: prebuilt/app.apk
-          enable-attestation: true
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'prebuilt/app.apk'
