@@ -5,6 +5,7 @@ on:
     branches: [main]
 
 permissions:
+  id-token: write          # <-- add this line
   attestations: write
   contents: read
 
@@ -15,10 +16,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      # If you build your APK, do it here
-      # - name: Build APK
-      #   run: ./gradlew assembleRelease
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
