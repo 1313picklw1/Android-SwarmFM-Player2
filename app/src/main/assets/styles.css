@@ -1,0 +1,60 @@
+html, body, div, iframe {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  border: none;
+  overflow-y: hidden;
+  font-family: Arial, sans-serif;
+}
+
+.titlebar {
+  height: 35px;           /* taller bar */
+  background: #ad16ad;
+  user-select: none;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  position: fixed;
+  top: 0px;              /* pushed down a bit from the top */
+  left: 0;
+  right: 0;
+  padding-right: 0px;
+  border-radius: 5px;
+}
+
+.titlebar-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 35px;
+  height: 35px;
+  cursor: pointer;
+  color: white;
+}
+
+.titlebar-button:hover {
+  background: #e027e0;
+  border-radius: 3px;
+}
+
+.titlebar-button.on {
+  background: #ff00ff;
+  animation: pulsing 3s infinite;
+  border-radius: 3px;
+}
+
+@keyframes pulsing {
+  0%, 100% { background: #e027e0; }
+  50% { background: #ff00ff; }
+}
+
+#player {
+  position: fixed;
+  top: 55px; /* leave space for the bar */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: calc(100% - 55px);
+  pointer-events: none;
+}

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Android SwarmFM Player</title>
+    <style>
+        html, body, div, iframe {
+          margin: 0;
+          padding: 0;
+          height: 100%;
+          border: none;
+          overflow: hidden;
+        }
+
+        #player {
+          position: fixed;
+          top: 50px;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          width: 100%;
+          height: calc(100% - 50px);
+        }
+
+        .titlebar {
+          height: 50px;
+          background: #ad16ad;
+          user-select: none;
+          display: flex;
+          justify-content: flex-end;
+          align-items: center;
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          z-index: 1000;
+          padding-right: 10px;
+        }
+
+        .titlebar-button {
+          display: inline-flex;
+          justify-content: center;
+          align-items: center;
+          width: 40px;
+          height: 40px;
+          cursor: pointer;
+          color: black;
+          background: #ad16ad; /* MATCH titlebar color */
+          border-radius: 5px;
+          transition: background 0.2s;
+        }
+
+        .titlebar-button:hover {
+          background: #e027e0;
+        }
+
+        .titlebar-button.on {
+          background: #ff00ff;
+          animation: pulsing 3s infinite;
+        }
+
+        @keyframes pulsing {
+          0% { background: #e027e0; }
+          50% { background: #ff00ff; }
+          100% { background: #e027e0; }
+        }
+
+        .titlebar-button svg {
+          width: 24px;
+          height: 24px;
+        }
+
+        #error {
+          position: fixed;
+          top: 50px;
+          left: 0;
+          right: 0;
+          background: #ffcccc;
+          color: #900;
+          font-weight: bold;
+          padding: 8px 12px;
+          z-index: 1100;
+          display: none;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+    </style>
+</head>
+<body>
+
+<div class="titlebar" data-tauri-drag-region>
+    <div class="titlebar-button" id="titlebar-mute" title="Mute">
+        <!-- Mute icon default -->
+        <svg id="mute-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M11.243 12.993a.75.75 0 0 1-.53-1.281 5.256 5.256 0 0 0 0-7.425.75.75 0 1 1 1.061-1.061c1.275 1.275 1.977 2.97 1.977 4.773s-.702 3.498-1.977 4.773a.75.75 0 0 1-.53.22zm-2.665-1.415a.75.75 0 0 1-.53-1.281 3.254 3.254 0 0 0 0-4.596.75.75 0 1 1 1.061-1.061 4.756 4.756 0 0 1 0 6.718.75.75 0 0 1-.53.22zM6.5 15a.5.5 0 0 1-.354-.146L2.292 11H.499a.5.5 0 0 1-.5-.5v-5a.5.5 0 0 1 .5-.5h1.793l3.854-3.854A.499.499 0 0 1 7 1.5v13a.5.5 0 0 1-.5.5z"/>
+        </svg>
+    </div>
+</div>
+
+<div id="error"></div>
+<div id="player"></div>
+
+<script>
+    let player;
+    let videoId;
+    let muted = false;
+
+    function extractVideoId(input) {
+      try {
+        const url = new URL(input);
+        return url.searchParams.get('v');
+      } catch {
+        return input;
+      }
+    }
+
+    function showError(msg) {
+      const errorEl = document.getElementById('error');
+      errorEl.textContent = msg;
+      errorEl.style.display = 'block';
+    }
+
+    function hideError() {
+      document.getElementById('error').style.display = 'none';
+    }
+
+    function onYouTubeIframeAPIReady() {
+      if (!videoId) {
+        showError('No videoId set before YouTube API ready');
+        return;
+      }
+
+      player = new YT.Player('player', {
+        height: '100%',
+        width: '100%',
+        videoId: videoId,
+        playerVars: {
+          autoplay: 1,
+          controls: 0,
+          modestbranding: 1,
+          disablekb: 1,
+          loop: 1,
+          playlist: videoId
+        },
+        events: {
+          onReady: (event) => {
+            hideError();
+            event.target.playVideo();
+            event.target.setVolume(muted ? 0 : 100);
+          },
+          onError: (event) => {
+            showError('YouTube Player error: ' + event.data);
+          }
+        }
+      });
+    }
+
+    function loadYouTubeApi() {
+      if (!document.getElementById('youtube-api')) {
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        tag.id = 'youtube-api';
+        document.head.appendChild(tag);
+      } else if (window.YT && YT.Player) {
+        onYouTubeIframeAPIReady();
+      }
+    }
+
+    function fetchVideoIdAndLoad() {
+      fetch('https://sw.arm.fm/api/uptime/status')
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+          return res.json();
+        })
+        .then(data => {
+          videoId = data.videoId || extractVideoId(data.url);
+          if (!videoId) throw new Error('No videoId found in API response');
+          loadYouTubeApi();
+        })
+        .catch(err => {
+          showError('Failed to fetch livestream info: ' + err.message);
+        });
+    }
+
+    function updateMuteIcon() {
+      const icon = document.getElementById('mute-icon');
+      icon.innerHTML = muted
+        ? `<path d="M9.636 10.05 13.586 14a.75.75 0 1 0 1.06-1.06l-13-13A.75.75 0 0 0 .586 1.94L3.645 5H.5a.5.5 0 0 0-.5.5v5c0 .276.224.5.5.5h3.793l3.854 3.854A.5.5 0 0 0 8.5 15v-5.378l1.136 1.136zM10.5 8c0 .595-.104 1.166-.295 1.694l1.166 1.166A5.48 5.48 0 0 0 11 8a5.5 5.5 0 0 0-1.854-4.162.75.75 0 0 0-.988 1.128A4 4 0 0 1 10.5 8z"/>`
+        : `<path d="M11.243 12.993a.75.75 0 0 1-.53-1.281 5.256 5.256 0 0 0 0-7.425.75.75 0 1 1 1.061-1.061c1.275 1.275 1.977 2.97 1.977 4.773s-.702 3.498-1.977 4.773a.75.75 0 0 1-.53.22zm-2.665-1.415a.75.75 0 0 1-.53-1.281 3.254 3.254 0 0 0 0-4.596.75.75 0 1 1 1.061-1.061 4.756 4.756 0 0 1 0 6.718.75.75 0 0 1-.53.22zM6.5 15a.5.5 0 0 1-.354-.146L2.292 11H.499a.5.5 0 0 1-.5-.5v-5a.5.5 0 0 1 .5-.5h1.793l3.854-3.854A.499.499 0 0 1 7 1.5v13a.5.5 0 0 1-.5.5z"/>`;
+    }
+
+    window.onload = () => {
+      fetchVideoIdAndLoad();
+
+      const muteButton = document.getElementById('titlebar-mute');
+      muteButton.addEventListener('click', () => {
+        if (!player) return;
+        muted = !muted;
+        player.setVolume(muted ? 0 : 100);
+        muteButton.classList.toggle('on', muted);
+        updateMuteIcon();
+      });
+    };
+</script>
+
+</body>
+</html>
