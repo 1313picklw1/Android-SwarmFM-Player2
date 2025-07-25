@@ -1,33 +1,24 @@
-name: Build APK with Attestation
+name: Build + Attest APK
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+
+permissions:
+  attestations: write
+  contents: read
 
 jobs:
-  build:
+  upload-prebuilt-apk:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: 17
-
-    - name: Make gradlew executable
-      run: chmod +x ./gradlew
-
-    - name: Build APK
-      run: ./gradlew assembleRelease
-
-    - name: Upload APK with attestation
-      uses: actions/upload-artifact@v4
-      with:
-        name: app-release-apk
-        path: app/app-release.apk
-        enable-attestation: true
+      - name: Upload APK with attestation
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release.apk
+          path: prebuilt/app-release.apk
+          enable-attestation: true
